@@ -6,10 +6,6 @@
 [![Mozilla Add-on Rating](https://img.shields.io/amo/stars/adaptive-tab-bar-colour)](https://addons.mozilla.org/firefox/addon/adaptive-tab-bar-colour/)
 [![Mozilla Add-on](https://img.shields.io/amo/v/adaptive-tab-bar-colour?color=violet&label=version)](https://addons.mozilla.org/firefox/addon/adaptive-tab-theme/)
 
-# Adaptive Tab Bar Colour
-
-Changes the colour of Firefox theme to match the website’s appearance.
-
 [![Addons Store](https://raw.githubusercontent.com/Pro-Bandey/Shield-Authenticator/main/src/firefox.webp)](https://addons.mozilla.org/firefox/addon/adaptive-tab-bar-colour/)
 
 ---

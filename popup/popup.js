@@ -1,0 +1,244 @@
+"use strict";
+
+import preference from "../preference.js";
+import { recommendedAddonPagecolor } from "../constants.js";
+import { setSliderValue, setupSlider } from "../elements.js";
+import { localise, supportsThemeAPI } from "../utility.js";
+
+const pref = new preference();
+
+const loadingWrapper = document.querySelector("#loading-wrapper");
+const settingsWrapper = document.querySelector("#settings-wrapper");
+const infoDisplay = document.querySelector("#info-display-wrapper");
+const colorCorrectionInfo = document.querySelector("#color-correction-info");
+
+const moreCustomButton = document.querySelector("#custom-popup");
+moreCustomButton.onclick = () => browser.runtime.openOptionsPage();
+
+const sliders = document.querySelectorAll(".slider");
+sliders.forEach((slider) =>
+	setupSlider(slider, async (key, value) => {
+		pref[key] = value;
+		await applySettings();
+	}),
+);
+
+/** Updates infobox's content and popup's text and background color. */
+async function updatePopup() {
+	await pref.load();
+	if (pref.valid()) {
+		updateSliders();
+		await updateInfoDisplay();
+		if (!pref.compatibilityMode) await updatePopupcolor();
+		updateCompatibilityMode();
+		loadingWrapper.classList.toggle("hidden", true);
+	} else {
+		browser.runtime.sendMessage({ header: "INIT_REQUEST" });
+	}
+}
+
+function updateSliders() {
+	sliders.forEach((slider) => {
+		setSliderValue(slider, pref[slider.dataset.pref]);
+	});
+}
+
+async function updateInfoDisplay(nthTry = 0) {
+	if (nthTry > 3) {
+		setInfoDisplay({ reason: "ERROR_OCCURRED" });
+		return;
+	}
+	try {
+		const activeTabs = await browser.tabs.query({
+			active: true,
+			status: "complete",
+			currentWindow: true,
+		});
+		if (activeTabs.length === 0) {
+			setInfoDisplay({ reason: "PROTECTED_PAGE" });
+			colorCorrectionInfo.classList.toggle("hidden", true);
+			return;
+		}
+		const tab = activeTabs[0];
+		const windowId = tab.windowId;
+		const meta = await browser.runtime.sendMessage({
+			header: "META_REQUEST",
+			windowId: windowId,
+		});
+		if (!meta) return setTimeout(() => updateInfoDisplay(++nthTry), 50);
+		const actions = {
+			THEME_UNIGNORED: { value: false },
+			THEME_USED: { value: false },
+			THEME_IGNORED: { value: true },
+		};
+		colorCorrectionInfo.classList.toggle("hidden", !meta.corrected);
+		if (meta.reason === "ADDON") {
+			if (!meta.info) {
+				setInfoDisplay({ reason: "ADDON" });
+			} else {
+				const addonInfo = await getAddonPageInfo(meta.info);
+				setInfoDisplay(addonInfo);
+			}
+		} else if (meta.reason in actions) {
+			setInfoDisplay({
+				reason: meta.reason,
+				info: null,
+				infoAction: async () => {
+					if (!tab.url) return;
+					const header = new URL(tab.url).hostname;
+					const { id, policy } = pref.getPolicy(tab.url);
+					if (
+						id &&
+						policy?.header === header &&
+						policy?.type === "THEME_color"
+					) {
+						pref.setPolicy(id, {
+							headerType: "URL",
+							header: header,
+							type: "THEME_color",
+							...actions[meta.reason],
+						});
+					} else {
+						pref.addPolicy({
+							headerType: "URL",
+							header: header,
+							type: "THEME_color",
+							...actions[meta.reason],
+						});
+					}
+					await applySettings();
+				},
+			});
+		} else {
+			setInfoDisplay(meta);
+		}
+	} catch (error) {
+		setTimeout(() => updateInfoDisplay(++nthTry), 50);
+	}
+}
+
+/** @param {string} addonId */
+async function getAddonPageInfo(addonId) {
+	const addonName = (await browser.management.get(addonId)).name;
+	if (pref.getPolicy(addonId).policy) {
+		return {
+			reason: "ADDON_SPECIFIED",
+			info: addonName,
+			infoAction: async () => await specifycolorForAddon(addonId, null),
+		};
+	} else if (addonId in recommendedAddonPagecolor) {
+		return {
+			reason: "ADDON_RECOM",
+			info: addonName,
+			infoAction: async () =>
+				await specifycolorForAddon(
+					addonId,
+					recommendedAddonPagecolor[addonId],
+				),
+		};
+	} else {
+		return {
+			reason: "ADDON_DEFAULT",
+			info: addonName,
+			infoAction: async () =>
+				await specifycolorForAddon(addonId, "#333333", true),
+		};
+	}
+}
+
+/**
+ * @param {string} addonId
+ * @param {string} colorHex
+ * @param {boolean} openOptionsPage
+ */
+async function specifycolorForAddon(
+	addonId,
+	colorHex,
+	openOptionsPage = false,
+) {
+	if (colorHex) {
+		pref.addPolicy({
+			headerType: "ADDON_ID",
+			header: addonId,
+			type: "color",
+			value: colorHex,
+		});
+	} else {
+		pref.removePolicy(pref.getPolicy(addonId).id);
+	}
+	await applySettings();
+	if (openOptionsPage) browser.runtime.openOptionsPage();
+}
+
+/**
+ * Changes the content shown in info display panel.
+ *
+ * @param {Object} options Options to configure the info display panel.
+ * @param {string} options.reason Determines which page to show on the panel by
+ *   setting the class name of the info display.
+ * @param {string | null} options.info Additional information to display on the
+ *   panel.
+ * @param {function | null} options.infoAction The function called by the
+ *   `.info-action` button being clicked.
+ */
+function setInfoDisplay({
+	reason = "ERROR_OCCURRED",
+	info = null,
+	infoAction = null,
+}) {
+	infoDisplay.className = reason;
+	const additionalInfoDisplay = infoDisplay.querySelector(
+		`[name='${reason}'] .additional-info`,
+	);
+	const infoActionButton = infoDisplay.querySelector(
+		`[name='${reason}'] .info-action`,
+	);
+	if (info) additionalInfoDisplay.textContent = info;
+	if (infoAction) infoActionButton.onclick = infoAction;
+}
+
+/** Updates popup's text and background color. */
+async function updatePopupcolor() {
+	const theme = await browser.theme?.getCurrent();
+	if (theme?.colors?.popup && theme?.colors?.popup_text) {
+		document.documentElement.style.setProperty(
+			"--background-color",
+			theme.colors.popup,
+		);
+		document.documentElement.style.setProperty(
+			"--text-color",
+			theme.colors.popup_text,
+		);
+	}
+}
+
+/** Update popup's UI related to compatibility mode. */
+function updateCompatibilityMode() {
+	document.querySelectorAll(`.section-group .section`).forEach((section) => {
+		const tabbarSlider = section.querySelector(
+			`.slider[data-pref="tabbar"]`,
+		);
+		if (tabbarSlider) {
+			section
+				.querySelector(`.slider[data-pref="tabbarBorder"]`)
+				.classList.toggle("disabled", pref.compatibilityMode);
+		} else {
+			Array.from(section.children).forEach((child) => {
+				child.classList.toggle("disabled", pref.compatibilityMode);
+			});
+		}
+	});
+}
+
+/** Triggers color update. */
+async function applySettings() {
+	await pref.save();
+	await browser.runtime.sendMessage({ header: "PREF_CHANGED" });
+}
+
+document.addEventListener("pageshow", updatePopup);
+browser.storage.onChanged.addListener(updatePopup);
+browser.theme?.onUpdated?.addListener(updatePopup);
+updatePopup();
+
+document.addEventListener("DOMContentLoaded", () => localise(document));

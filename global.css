@@ -1,0 +1,98 @@
+html {
+	--accent-color: #8ac819;
+	--color-0: hsl(0, 0%, 100%);
+	--color-1: hsl(240, 10%, 95%);
+	--color-1-5: hsl(240, 13%, 97.5%);
+	--color-2: hsl(240, 10%, 90%);
+	--color-3: hsl(240, 10%, 85%);
+	--color-4: hsl(240, 10%, 80%);
+	--color-5: hsl(240, 10%, 75%);
+	--link-color-active: #639605;
+	--link-color-hover: #83bb02;
+	--link-color-normal: #9cdf00;
+	--text-color-normal: hsl(0, 0%, 0%);
+	--text-color-secondary: hsl(0, 0%, 20%);
+	--transparent-0: hsla(0, 0%, 0%, 10%);
+	--transparent-1: hsla(0, 0%, 0%, 15%);
+	--transparent-2: hsla(0, 0%, 0%, 20%);
+	--transparent-3: hsla(0, 0%, 0%, 25%);
+	--transparent-4: hsla(0, 0%, 0%, 30%);
+	--transparent-5: hsla(0, 0%, 0%, 35%);
+	font-size: 14px;
+	font-family: sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+	html {
+		--accent-color: #8ac819;
+		--color-0: hsl(248, 11%, 15%);
+		--color-1: hsl(248, 11%, 20%);
+		--color-1-5: hsl(248, 11%, 17.5%);
+		--color-2: hsl(248, 11%, 25%);
+		--color-3: hsl(248, 11%, 30%);
+		--color-4: hsl(248, 11%, 35%);
+		--color-5: hsl(248, 11%, 40%);
+		--link-color-active: #e6ffaa;
+		--link-color-hover: #d9ff80;
+		--link-color-normal: #d9ff00;
+		--text-color-normal: hsl(0, 0%, 100%);
+		--text-color-secondary: hsl(0, 0%, 80%);
+		--transparent-0: hsla(0, 0%, 100%, 10%);
+		--transparent-1: hsla(0, 0%, 100%, 15%);
+		--transparent-2: hsla(0, 0%, 100%, 20%);
+		--transparent-3: hsla(0, 0%, 100%, 25%);
+		--transparent-4: hsla(0, 0%, 100%, 30%);
+		--transparent-5: hsla(0, 0%, 100%, 0.35);
+	}
+}
+
+#reinstall-tip {
+	opacity: 0;
+	animation-duration: 0s;
+	animation-delay: 5s;
+	animation-fill-mode: forwards;
+	animation-name: appear;
+	white-space: normal;
+	overflow-wrap: break-word;
+}
+
+@keyframes appear {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
+	}
+}
+
+#template,
+.hidden {
+	display: none !important;
+}
+
+.disabled {
+	opacity: 0.5;
+	pointer-events: none;
+
+	* {
+		pointer-events: none;
+	}
+}
+
+svg {
+	align-self: center;
+	vertical-align: middle;
+	fill: none;
+	stroke: currentColor;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	stroke-width: 2px;
+	margin: 0;
+	width: 1em;
+	height: 1em;
+}
+
+button {
+	font-size: inherit;
+}

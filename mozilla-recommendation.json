@@ -1,9 +1,0 @@
-{
-  "addon_id": "adaptive-tab-theme@mrc.com",
-  "states": ["recommended"],
-  "validity": {
-    "not_after": "2035-03-06T19:05:16Z",
-    "not_before": "2026-03-06T13:05:16Z"
-  },
-  "schema_version": 1
-}
